@@ -70,7 +70,7 @@ func handleFiles(files []os.DirEntry, remove bool, fileExtensions []string) erro
 			message = fmt.Sprintf("filecleanse found %d total files using file extensions %s.\n", found, extensions)
 		}
 
-		fmt.Printf(message)
+		fmt.Print(message)
 	}
 
 	return nil
@@ -101,8 +101,6 @@ var rootCmd = &cobra.Command{
 			return errors.New("Missing arguments! Type filecleanse --help for CLI usage.")
 		}
 
-		// TODO => We need to determine if we have multiple extensions to look for.
-		// TODO => Split on commas always and then determine if we need to look for more than one.
 		fileExtensions := strings.Split(args[0], ",")
 		extensions = strings.Join(fileExtensions, ", ")
 		checkFilePrefix(fileExtensions)
@@ -129,6 +127,7 @@ var rootCmd = &cobra.Command{
 			return err
 		}
 
+		fmt.Println("Here we are: ", extensions)
 		if found == 0 {
 			fmt.Printf("Zero files were found using extension %s in path %s\n", extensions, path)
 		} else {
