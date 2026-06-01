@@ -135,11 +135,9 @@ func checkFilePrefix(fileExtensions []string) []string {
 var rootCmd = &cobra.Command{
 	Use:   "filecleanse",
 	Short: "Cleanse a directory from a specific file extension",
-	Long: "filecleanse takes a file extension and a path to where those files exist\n" +
-		"and removes them from your machine.\n\n" +
-		"By default, filecleanse will look in the specified directory, report\n" +
-		"anything.\n" +
-		"Multiple file extensions should be comma delimited.",
+	Long: "filecleanse removes all the files matching a given extension from a specified path.\n" +
+		"By default, filecleanse will look in your current working directory," +
+		"unless specified with the --path subcommand. Multiple file extensions must be comma delimited, otherwise it might blow up.\n",
 	Example: "  Remove all .log files from a specific directory\n" +
 		"  filecleanse log --path /var/log\n",
 	RunE: func(cmd *cobra.Command, args []string) error {
