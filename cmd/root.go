@@ -137,7 +137,7 @@ var rootCmd = &cobra.Command{
 	Short: "Cleanse a directory from a specific file extension",
 	Long: "filecleanse removes all the files matching a given extension from a specified path.\n" +
 		"By default, filecleanse will look in your current working directory," +
-		"unless specified with the --path subcommand. Multiple file extensions must be comma delimited, otherwise it might blow up.\n",
+		" unless specified with the --path subcommand.\nMultiple file extensions must be comma delimited, otherwise it might blow up.\n",
 	Example: "  Remove all .log files from a specific directory\n" +
 		"  filecleanse log --path /var/log\n",
 	RunE: func(cmd *cobra.Command, args []string) error {
