@@ -46,7 +46,7 @@ func innerCheck(file string, remove bool, dir string) error {
 	return nil
 }
 
-func foundFile(fileExtension []string, s string) bool {
+func findFile(fileExtension []string, s string) bool {
 	return slices.ContainsFunc(fileExtension, func(ext string) bool {
 		return strings.Contains(s, ext)
 	})
@@ -61,8 +61,8 @@ func handleRecursive(fileExtensions []string, remove bool) error {
 
 		isSecret := strings.HasPrefix(d.Name(), ".")
 		isFile := d.IsDir()
-		foundFile := foundFile(fileExtensions, d.Name())
-		if !isSecret && isFile && foundFile {
+		found := findFile(fileExtensions, d.Name())
+		if !isSecret && isFile && found {
 			innerCheck(d.Name(), remove, recPath)
 		}
 
@@ -86,8 +86,8 @@ func handleFiles(files []os.DirEntry, remove bool, fileExtensions []string) erro
 			return errors.New("FileInfo could not be retrieved")
 		}
 
-		foundFile := foundFile(fileExtensions, fileInfo.Name())
-		if !fileInfo.IsDir() && foundFile {
+		found := findFile(fileExtensions, fileInfo.Name())
+		if !fileInfo.IsDir() && found {
 			innerCheck(fileInfo.Name(), remove, path+file.Name())
 		}
 	}
