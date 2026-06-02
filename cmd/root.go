@@ -198,7 +198,7 @@ func Execute() {
 }
 
 func init() {
-	rootCmd.Flags().BoolVar(&recursive, "recursive", false, "Recursively traverses the given path to delete files")
-	rootCmd.Flags().BoolVar(&dryRun, "dry-run", false, "Provides a list of files that would be deleted without removing themd")
+	rootCmd.Flags().BoolVarP(&recursive, "recursive", "r", false, "Recursively traverses the given path to delete files")
+	rootCmd.Flags().BoolVarP(&dryRun, "dry-run", "dr", false, "Provides a list of files that would be deleted without removing them")
 	rootCmd.Flags().StringVarP(&path, "path", "p", "", "Path to where your file extension exists")
 }
