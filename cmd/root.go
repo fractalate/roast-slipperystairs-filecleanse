@@ -43,6 +43,29 @@ func printMessage(remove bool, fileExtensions []string) {
 	}
 }
 
+func foundFile(fileExtension []string, s string) bool {
+	return slices.ContainsFunc(fileExtension, func(ext string) bool {
+		return strings.Contains(s, ext)
+	})
+}
+
+func innerCheck(file string, remove bool, dir string) error {
+	if !remove {
+		found++
+	} else if dryRun {
+		fmt.Println(file)
+	} else {
+		err := os.Remove(dir)
+		if err != nil {
+			fmt.Println(err)
+			return errors.New("File could not be removed: " + file)
+		}
+		fmt.Printf("Found and removed: %s\n", file)
+	}
+
+	return nil
+}
+
 func handleRecursive(fileExtensions []string, remove bool) error {
 	err := filepath.WalkDir(path, func(recPath string, d fs.DirEntry, err error) error {
 		if err != nil {
@@ -50,23 +73,11 @@ func handleRecursive(fileExtensions []string, remove bool) error {
 			return err
 		}
 
-		isSecret := !strings.HasPrefix(d.Name(), ".")
+		isSecret := strings.HasPrefix(d.Name(), ".")
 		isFile := d.IsDir()
-		foundFile := slices.ContainsFunc(fileExtensions, func(ext string) bool {
-			return strings.Contains(d.Name(), ext)
-		})
+		foundFile := foundFile(fileExtensions, d.Name())
 		if !isSecret && isFile && foundFile {
-			if !remove {
-				found++
-			} else {
-				err := os.Remove(recPath)
-				if err != nil {
-					fmt.Println(err)
-					return errors.New("Could no remove file: " + recPath)
-				}
-
-				fmt.Printf("Found and removed: %s\n", d.Name())
-			}
+			innerCheck(d.Name(), remove, recPath)
 		}
 
 		return nil
@@ -89,26 +100,9 @@ func handleFiles(files []os.DirEntry, remove bool, fileExtensions []string) erro
 			return errors.New("FileInfo could not be retrieved")
 		}
 
-		foundFile := slices.ContainsFunc(fileExtensions, func(ext string) bool {
-			return strings.Contains(fileInfo.Name(), ext)
-		})
+		foundFile := foundFile(fileExtensions, fileInfo.Name())
 		if !fileInfo.IsDir() && foundFile {
-			if !remove {
-				found++
-			} else {
-				err := os.Chdir(path)
-				if err != nil {
-					fmt.Println(err)
-					return errors.New("Could not change directories to: " + path)
-				}
-
-				err = os.Remove(file.Name())
-				if err != nil {
-					fmt.Println(err)
-					return errors.New("Could not remove file: " + file.Name())
-				}
-				fmt.Printf("Found and removed: %s\n", file.Name())
-			}
+			innerCheck(fileInfo.Name(), remove, path+file.Name())
 		}
 	}
 
@@ -126,12 +120,6 @@ func checkFilePrefix(fileExtensions []string) []string {
 	return fileExtensions
 }
 
-// TODO => Add two more flags --recursive, and --dry-run
-// TODO   - Recursive will use filepath.WalDir to traverse through the given path and remove the extensions provided.
-// TODO   - Dry Run will print out a list of potential files to delete without removing them.
-// TODO => Create a utility file and our root will call the necessary function based on the recursive flag.
-// TODO => We could use another function that does the inner logic once we write out the new function.
-// TODO => Cleanup some of the repetitiveness
 var rootCmd = &cobra.Command{
 	Use:   "filecleanse",
 	Short: "Cleanse a directory from a specific file extension",
@@ -155,8 +143,6 @@ var rootCmd = &cobra.Command{
 			if err != nil {
 				return errors.New("An error occurred when grabbing the current work directory")
 			}
-			// os.Getwd() doesn't return the trailing slash in a directory.
-			// Concatenate the trailing slash so we don't run into any errors.
 		}
 
 		// Add to the trailing slash if needed
@@ -178,10 +164,8 @@ var rootCmd = &cobra.Command{
 			if err != nil {
 				return err
 			}
-
 		}
 
-		fmt.Println("Here we are: ", extensions)
 		if found == 0 {
 			fmt.Printf("Zero files were found using extension %s in path %s\n", extensions, path)
 		} else {
@@ -189,11 +173,15 @@ var rootCmd = &cobra.Command{
 			fmt.Scan(&response)
 			valid, msg := validateResponse(response)
 
+			if recursive {
+				err = handleRecursive(fileExtensions, true)
+			} else {
+				err = handleFiles(files, true, fileExtensions)
+			}
+
 			if !valid {
 				fmt.Print(msg)
-			} else if err = handleFiles(files, true, fileExtensions); err != nil && !recursive {
-				return err
-			} else if err = handleRecursive(fileExtensions, true); err != nil && recursive {
+			} else if err != nil {
 				return err
 			}
 		}
