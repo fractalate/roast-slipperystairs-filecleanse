@@ -173,16 +173,18 @@ var rootCmd = &cobra.Command{
 			fmt.Scan(&response)
 			valid, msg := validateResponse(response)
 
-			if recursive {
-				err = handleRecursive(fileExtensions, true)
-			} else {
-				err = handleFiles(files, true, fileExtensions)
-			}
-
 			if !valid {
 				fmt.Print(msg)
-			} else if err != nil {
-				return err
+			} else {
+				if recursive {
+					err = handleRecursive(fileExtensions, true)
+				} else {
+					err = handleFiles(files, true, fileExtensions)
+				}
+
+				if err != nil {
+					return err
+				}
 			}
 		}
 
