@@ -18,20 +18,6 @@ var extensions string
 var recursive bool
 var dryRun bool
 
-func validateResponse(response string) (bool, string) {
-	trimmed := strings.ToLower(strings.TrimSpace(response))
-	startsY := strings.HasPrefix(trimmed, "y")
-
-	if !startsY ||
-		len(trimmed) == 1 && trimmed != "y" ||
-		len(trimmed) == 3 && trimmed != "yes" ||
-		startsY && len(trimmed) > 3 {
-		return false, "Input was either invalid or removal was cancelled!\n"
-	}
-
-	return true, ""
-}
-
 func printMessage(remove bool, fileExtensions []string) {
 	if !remove {
 		message := fmt.Sprintf("filecleanse found %d total files using a %s extension.\n", found, extensions)
@@ -41,12 +27,6 @@ func printMessage(remove bool, fileExtensions []string) {
 
 		fmt.Print(message)
 	}
-}
-
-func foundFile(fileExtension []string, s string) bool {
-	return slices.ContainsFunc(fileExtension, func(ext string) bool {
-		return strings.Contains(s, ext)
-	})
 }
 
 func innerCheck(file string, remove bool, dir string) error {
@@ -64,6 +44,12 @@ func innerCheck(file string, remove bool, dir string) error {
 	}
 
 	return nil
+}
+
+func foundFile(fileExtension []string, s string) bool {
+	return slices.ContainsFunc(fileExtension, func(ext string) bool {
+		return strings.Contains(s, ext)
+	})
 }
 
 func handleRecursive(fileExtensions []string, remove bool) error {
@@ -108,6 +94,20 @@ func handleFiles(files []os.DirEntry, remove bool, fileExtensions []string) erro
 
 	printMessage(remove, fileExtensions)
 	return nil
+}
+
+func validateResponse(response string) (bool, string) {
+	trimmed := strings.ToLower(strings.TrimSpace(response))
+	startsY := strings.HasPrefix(trimmed, "y")
+
+	if !startsY ||
+		len(trimmed) == 1 && trimmed != "y" ||
+		len(trimmed) == 3 && trimmed != "yes" ||
+		startsY && len(trimmed) > 3 {
+		return false, "Input was either invalid or removal was cancelled!\n"
+	}
+
+	return true, ""
 }
 
 func checkFilePrefix(fileExtensions []string) []string {
