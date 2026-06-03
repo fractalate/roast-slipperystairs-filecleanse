@@ -6,6 +6,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"strings"
 
@@ -116,21 +117,19 @@ func validateResponse(response string) (bool, string) {
 	return true, ""
 }
 
-func checkFilePrefix(fileExtensions []string) []string {
-	for _, ext := range fileExtensions {
-		if !strings.HasPrefix(ext, ".") {
-			ext = "." + ext
+func validateArgs(args []string) []string {
+	extensions := []string{}
+	var validExtPattern = regexp.MustCompile(`^\.?[a-zA-Z0-9]+$`)
+	for i := range args {
+		ext := strings.ReplaceAll(args[i], ",", "")
+		if validExtPattern.MatchString(ext) {
+			if !strings.HasPrefix(ext, ".") {
+				ext = "." + ext
+			}
+			extensions = append(extensions, ext)
 		}
 	}
-
-	return fileExtensions
-}
-
-func removeCommas(args []string) []string {
-	for i := range args {
-		args[i] = strings.ReplaceAll(args[i], ",", "")
-	}
-	return args
+	return extensions
 }
 
 var rootCmd = &cobra.Command{
@@ -147,9 +146,8 @@ var rootCmd = &cobra.Command{
 		}
 
 		files := []os.DirEntry{}
-		fileExtensions := removeCommas(args)
+		fileExtensions := validateArgs(args)
 		extensions = strings.Join(fileExtensions, ", ")
-		checkFilePrefix(fileExtensions)
 		if len(path) == 0 {
 			var err error
 			path, err = os.Getwd()
