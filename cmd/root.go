@@ -33,12 +33,11 @@ func innerCheck(file string, remove bool, dir string) error {
 	if !remove {
 		found++
 	} else if dryRun {
-		fmt.Println(file)
+		fmt.Println("Potential file:", dir)
 	} else {
 		err := os.Remove(dir)
 		if err != nil {
-			fmt.Println(err)
-			return errors.New("File could not be removed: " + file)
+			return err
 		}
 		fmt.Printf("Found and removed: %s\n", file)
 	}
@@ -55,15 +54,17 @@ func findFile(fileExtension []string, s string) bool {
 func handleRecursive(fileExtensions []string, remove bool) error {
 	err := filepath.WalkDir(path, func(recPath string, d fs.DirEntry, err error) error {
 		if err != nil {
-			fmt.Printf("Error accessing path: %s: %v\n", recPath, err)
 			return err
 		}
 
 		isSecret := strings.HasPrefix(d.Name(), ".")
 		isFile := d.IsDir()
 		found := findFile(fileExtensions, d.Name())
-		if !isSecret && isFile && found {
-			innerCheck(d.Name(), remove, recPath)
+		if !isSecret && !isFile && found {
+			err = innerCheck(d.Name(), remove, recPath)
+			if err != nil {
+				return err
+			}
 		}
 
 		return nil
@@ -77,18 +78,23 @@ func handleFiles(files []os.DirEntry, remove bool, fileExtensions []string) erro
 	for _, file := range files {
 		// Skip hidden files
 		if strings.HasPrefix(file.Name(), ".") {
+			if remove {
+				fmt.Println(file.Name())
+			}
 			continue
 		}
 
 		fileInfo, err := os.Stat(path + file.Name())
 		if err != nil {
-			fmt.Println(err)
-			return errors.New("FileInfo could not be retrieved")
+			return err
 		}
 
 		found := findFile(fileExtensions, fileInfo.Name())
 		if !fileInfo.IsDir() && found {
-			innerCheck(fileInfo.Name(), remove, path+file.Name())
+			err = innerCheck(fileInfo.Name(), remove, path+fileInfo.Name())
+			if err != nil {
+				return err
+			}
 		}
 	}
 
@@ -120,6 +126,13 @@ func checkFilePrefix(fileExtensions []string) []string {
 	return fileExtensions
 }
 
+func removeCommas(args []string) []string {
+	for i := range args {
+		args[i] = strings.ReplaceAll(args[i], ",", "")
+	}
+	return args
+}
+
 var rootCmd = &cobra.Command{
 	Use:   "filecleanse",
 	Short: "Cleanse a directory from a specific file extension",
@@ -134,7 +147,7 @@ var rootCmd = &cobra.Command{
 		}
 
 		files := []os.DirEntry{}
-		fileExtensions := strings.Split(args[0], ",")
+		fileExtensions := removeCommas(args)
 		extensions = strings.Join(fileExtensions, ", ")
 		checkFilePrefix(fileExtensions)
 		if len(path) == 0 {
@@ -155,7 +168,7 @@ var rootCmd = &cobra.Command{
 		if recursive {
 			err = handleRecursive(fileExtensions, false)
 		} else {
-			files, err := os.ReadDir(path)
+			files, err = os.ReadDir(path)
 			if err != nil {
 				return errors.New("Directory: " + path + " could not be read")
 			}
@@ -201,6 +214,6 @@ func Execute() {
 
 func init() {
 	rootCmd.Flags().BoolVarP(&recursive, "recursive", "r", false, "Recursively traverses the given path to delete files")
-	rootCmd.Flags().BoolVarP(&dryRun, "dry-run", "dr", false, "Provides a list of files that would be deleted without removing them")
+	rootCmd.Flags().BoolVarP(&dryRun, "dry-run", "d", false, "Provides a list of files that would be deleted without removing them")
 	rootCmd.Flags().StringVarP(&path, "path", "p", "", "Path to where your file extension exists")
 }
