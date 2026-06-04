@@ -40,7 +40,7 @@ func innerCheck(file string, remove bool, dir string) error {
 		if err != nil {
 			return err
 		}
-		fmt.Printf("Found and removed: %s\n", file)
+		fmt.Printf("Removed file: %s\n", dir)
 	}
 
 	return nil
@@ -117,19 +117,24 @@ func validateResponse(response string) (bool, string) {
 	return true, ""
 }
 
-func validateArgs(args []string) []string {
+func validateArgs(args []string) ([]string, error) {
 	extensions := []string{}
 	var validExtPattern = regexp.MustCompile(`^\.?[a-zA-Z0-9]+$`)
 	for i := range args {
+		// Add file prefix if it doesn't exist
 		ext := strings.ReplaceAll(args[i], ",", "")
-		if validExtPattern.MatchString(ext) {
-			if !strings.HasPrefix(ext, ".") {
-				ext = "." + ext
-			}
-			extensions = append(extensions, ext)
+		if !strings.HasPrefix(ext, ".") {
+			ext = "." + ext
 		}
+
+		if !validExtPattern.MatchString(ext) {
+			extensions = []string{}
+			msg := "Invalid extension supplied to filecleanse: " + ext
+			return extensions, errors.New(msg)
+		}
+		extensions = append(extensions, ext)
 	}
-	return extensions
+	return extensions, nil
 }
 
 var rootCmd = &cobra.Command{
@@ -145,11 +150,15 @@ var rootCmd = &cobra.Command{
 			return errors.New("Missing arguments! Type filecleanse --help for CLI usage.")
 		}
 
+		var err error
 		files := []os.DirEntry{}
-		fileExtensions := validateArgs(args)
+		fileExtensions, err := validateArgs(args)
+		if err != nil {
+			return err
+		}
+
 		extensions = strings.Join(fileExtensions, ", ")
 		if len(path) == 0 {
-			var err error
 			path, err = os.Getwd()
 			if err != nil {
 				return errors.New("An error occurred when grabbing the current work directory")
@@ -161,7 +170,6 @@ var rootCmd = &cobra.Command{
 			path += "/"
 		}
 
-		var err error
 		response := ""
 		if recursive {
 			err = handleRecursive(fileExtensions, false)
