@@ -30,7 +30,7 @@ func printMessage(remove bool, fileExtensions []string) {
 	}
 }
 
-func innerCheck(file string, remove bool, dir string) error {
+func removeFile(remove bool, dir string) error {
 	if !remove {
 		found++
 	} else if dryRun {
@@ -62,7 +62,7 @@ func handleRecursive(fileExtensions []string, remove bool) error {
 		isFile := d.IsDir()
 		found := findFile(fileExtensions, d.Name())
 		if !isSecret && !isFile && found {
-			err = innerCheck(d.Name(), remove, recPath)
+			err = removeFile(remove, recPath)
 			if err != nil {
 				return err
 			}
@@ -92,7 +92,7 @@ func handleFiles(files []os.DirEntry, remove bool, fileExtensions []string) erro
 
 		found := findFile(fileExtensions, fileInfo.Name())
 		if !fileInfo.IsDir() && found {
-			err = innerCheck(fileInfo.Name(), remove, path+fileInfo.Name())
+			err = removeFile(remove, path+fileInfo.Name())
 			if err != nil {
 				return err
 			}
