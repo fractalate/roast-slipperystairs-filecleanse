@@ -30,11 +30,13 @@ Potential file: /home/dilly/Downloads/mynested/file2.dat
 Potential file: /home/dilly/Downloads/mynested/really/dir/gotcha.dat
 Potential file: /home/dilly/Downloads/mynested/really/file3.dat
 
-dilly@dilly:~$ filecleanse .dat, .txt --path /home/dilly/Downloads --recursive
-filecleanse found 4 total files using file extensions .dat, .txt.
+dilly@dilly:~$ filecleanse .dat, .xml, .txt, .js --path /home/dilly/Downloads/ --recursive
+filecleanse found 6 total files using file extensions .dat, .xml, .txt, .js.
 Would you like to delete them? yes
-Found and removed: file1.txt
-Found and removed: file2.dat
-Found and removed: gotcha.dat
-Found and removed: file3.dat
+Removed file: /home/dilly/Downloads/index.js
+Removed file: /home/dilly/Downloads/mynested/cant.dat
+Removed file: /home/dilly/Downloads/mynested/really/deeply/main.xml
+Removed file: /home/dilly/Downloads/mynested/really/deeply/nested/dir/lastone.txt
+Removed file: /home/dilly/Downloads/mynested/really/deeply/nested/something.txt
+Removed file: /home/dilly/Downloads/mynested/really/dis.dat
 ```

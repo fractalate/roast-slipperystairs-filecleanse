@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"bufio"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -105,8 +106,11 @@ func handleFiles(files []os.DirEntry, remove bool, fileExtensions []string) erro
 
 func validateResponse(response string) (bool, string) {
 	trimmed := strings.ToLower(strings.TrimSpace(response))
-	startsY := strings.HasPrefix(trimmed, "y")
+	if len(trimmed) == 0 {
+		return false, "Response cannot be empty\n"
+	}
 
+	startsY := strings.HasPrefix(trimmed, "y")
 	if !startsY ||
 		len(trimmed) == 1 && trimmed != "y" ||
 		len(trimmed) == 3 && trimmed != "yes" ||
@@ -170,7 +174,6 @@ var rootCmd = &cobra.Command{
 			path += "/"
 		}
 
-		response := ""
 		if recursive {
 			err = handleRecursive(fileExtensions, false)
 		} else {
@@ -188,22 +191,29 @@ var rootCmd = &cobra.Command{
 		if found == 0 {
 			fmt.Printf("Zero files were found using extension %s in path %s\n", extensions, path)
 		} else {
+			scanner := bufio.NewScanner(os.Stdin)
 			fmt.Printf("Would you like to delete them? ")
-			fmt.Scan(&response)
-			valid, msg := validateResponse(response)
+			if scanner.Scan() {
+				response := scanner.Text()
+				valid, msg := validateResponse(response)
 
-			if !valid {
-				fmt.Print(msg)
-			} else {
-				if recursive {
-					err = handleRecursive(fileExtensions, true)
+				if !valid {
+					fmt.Print(msg)
 				} else {
-					err = handleFiles(files, true, fileExtensions)
-				}
+					if recursive {
+						err = handleRecursive(fileExtensions, true)
+					} else {
+						err = handleFiles(files, true, fileExtensions)
+					}
 
-				if err != nil {
-					return err
+					if err != nil {
+						return err
+					}
 				}
+			}
+
+			if err := scanner.Err(); err != nil {
+				return err
 			}
 		}
 
