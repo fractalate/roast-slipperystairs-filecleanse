@@ -49,7 +49,7 @@ func removeFile(remove bool, dir string) error {
 
 func findFile(fileExtension []string, s string) bool {
 	return slices.ContainsFunc(fileExtension, func(ext string) bool {
-		return strings.Contains(s, ext)
+		return strings.HasSuffix(s, ext)
 	})
 }
 
@@ -65,7 +65,7 @@ func handleRecursive(fileExtensions []string, remove bool) error {
 		if !isSecret && !isFile && found {
 			err = removeFile(remove, recPath)
 			if err != nil {
-				return err
+				fmt.Println(err)
 			}
 		}
 
@@ -80,9 +80,6 @@ func handleFiles(files []os.DirEntry, remove bool, fileExtensions []string) erro
 	for _, file := range files {
 		// Skip hidden files
 		if strings.HasPrefix(file.Name(), ".") {
-			if remove {
-				fmt.Println(file.Name())
-			}
 			continue
 		}
 
@@ -94,9 +91,7 @@ func handleFiles(files []os.DirEntry, remove bool, fileExtensions []string) erro
 		found := findFile(fileExtensions, fileInfo.Name())
 		if !fileInfo.IsDir() && found {
 			err = removeFile(remove, path+fileInfo.Name())
-			if err != nil {
-				return err
-			}
+			fmt.Println(err)
 		}
 	}
 
@@ -154,6 +149,8 @@ var rootCmd = &cobra.Command{
 			return errors.New("Missing arguments! Type filecleanse --help for CLI usage.")
 		}
 
+		cmd.SilenceUsage = true
+
 		var err error
 		files := []os.DirEntry{}
 		fileExtensions, err := validateArgs(args)
@@ -188,32 +185,46 @@ var rootCmd = &cobra.Command{
 			}
 		}
 
+		oldDryRun := dryRun
+		if recursive {
+			err = handleRecursive(fileExtensions, true)
+		} else {
+			err = handleFiles(files, true, fileExtensions)
+		}
+		if err != nil {
+			fmt.Println(err)
+		}
+		err = nil
+		dryRun = oldDryRun
+
 		if found == 0 {
 			fmt.Printf("Zero files were found using extension %s in path %s\n", extensions, path)
 		} else {
-			scanner := bufio.NewScanner(os.Stdin)
-			fmt.Printf("Would you like to delete them? ")
-			if scanner.Scan() {
-				response := scanner.Text()
-				valid, msg := validateResponse(response)
+			if !dryRun {
+				scanner := bufio.NewScanner(os.Stdin)
+				fmt.Printf("Would you like to delete them? ")
+				if scanner.Scan() {
+					response := scanner.Text()
+					valid, msg := validateResponse(response)
 
-				if !valid {
-					fmt.Print(msg)
-				} else {
-					if recursive {
-						err = handleRecursive(fileExtensions, true)
+					if !valid {
+						fmt.Print(msg)
 					} else {
-						err = handleFiles(files, true, fileExtensions)
-					}
-
-					if err != nil {
-						return err
+						if recursive {
+							err = handleRecursive(fileExtensions, true)
+						} else {
+							err = handleFiles(files, true, fileExtensions)
+						}
+						if err != nil {
+							fmt.Println(err)
+						}
+						err = nil
 					}
 				}
-			}
 
-			if err := scanner.Err(); err != nil {
-				return err
+				if err := scanner.Err(); err != nil {
+					return err
+				}
 			}
 		}
 
