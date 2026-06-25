@@ -19,6 +19,7 @@ var path string
 var extensions string
 var recursive bool
 var dryRun bool
+var enlightenment bool
 
 func printMessage(remove bool, fileExtensions []string) {
 	if !remove {
@@ -49,7 +50,7 @@ func removeFile(remove bool, dir string) error {
 
 func findFile(fileExtension []string, s string) bool {
 	return slices.ContainsFunc(fileExtension, func(ext string) bool {
-		return strings.Contains(s, ext)
+		return filepath.Ext(s) == ext
 	})
 }
 
@@ -60,9 +61,9 @@ func handleRecursive(fileExtensions []string, remove bool) error {
 		}
 
 		isSecret := strings.HasPrefix(d.Name(), ".")
-		isFile := d.IsDir()
+		isNotAFile := d.IsDir()
 		found := findFile(fileExtensions, d.Name())
-		if !isSecret && !isFile && found {
+		if !isSecret && !isNotAFile && found {
 			err = removeFile(remove, recPath)
 			if err != nil {
 				return err
@@ -78,11 +79,7 @@ func handleRecursive(fileExtensions []string, remove bool) error {
 
 func handleFiles(files []os.DirEntry, remove bool, fileExtensions []string) error {
 	for _, file := range files {
-		// Skip hidden files
 		if strings.HasPrefix(file.Name(), ".") {
-			if remove {
-				fmt.Println(file.Name())
-			}
 			continue
 		}
 
@@ -113,6 +110,7 @@ func validateResponse(response string) (bool, string) {
 	startsY := strings.HasPrefix(trimmed, "y")
 	if !startsY ||
 		len(trimmed) == 1 && trimmed != "y" ||
+		len(trimmed) == 2 && trimmed != "ye" ||
 		len(trimmed) == 3 && trimmed != "yes" ||
 		startsY && len(trimmed) > 3 {
 		return false, "Input was either invalid or removal was cancelled!\n"
@@ -152,6 +150,34 @@ var rootCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) == 0 {
 			return errors.New("Missing arguments! Type filecleanse --help for CLI usage.")
+		}
+
+		if enlightenment {
+			p := path
+			if len(p) == 0 {
+				p = "."
+			}
+			exts, _ := validateArgs(args)
+			nameArgs := []string{}
+			for _, ext := range exts {
+				nameArgs = append(nameArgs, fmt.Sprintf("-name \"*%s\"", ext))
+			}
+			nameExpr := strings.Join(nameArgs, " -o ")
+			if len(exts) > 1 {
+				nameExpr = "\\( " + nameExpr + " \\)"
+			}
+			depth := ""
+			if !recursive {
+				depth = "-maxdepth 1 "
+			}
+			action := "-delete"
+			if dryRun {
+				action = "-print"
+			}
+			fmt.Printf("You never needed filecleanse. You needed:\n\n")
+			fmt.Printf("  find %s %s%s %s\n\n", p, depth, nameExpr, action)
+			fmt.Printf("This has worked since 1995. You're welcome.\n")
+			return nil
 		}
 
 		var err error
@@ -232,4 +258,5 @@ func init() {
 	rootCmd.Flags().BoolVarP(&recursive, "recursive", "r", false, "Recursively traverses the given path to delete files")
 	rootCmd.Flags().BoolVarP(&dryRun, "dry-run", "d", false, "Provides a list of files that would be deleted without removing them")
 	rootCmd.Flags().StringVarP(&path, "path", "p", "", "Path to where your file extension exists")
+	rootCmd.Flags().BoolVarP(&enlightenment, "enlightenment", "e", false, "Shows you the shell command that makes this program unnecessary")
 }
